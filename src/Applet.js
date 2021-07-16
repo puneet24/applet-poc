@@ -129,7 +129,7 @@ function Applet({ id, cacheManager }) {
                                 cmd: strVal,
                                 xml: api.getXML(objName)
                             }
-                        }), 'http://localhost:3000');
+                        }), 'https://main-ui-math-git-tenx-applet-fixes.whjr.dev');
                     }
 
                     const printConstructionState = () => {
