@@ -1,23 +1,20 @@
 import logo from './logo.svg';
 import './App.css';
+import Applet from './Applet'
+import { useState, useEffect } from 'react';
+import fileCache from "./cache";
 
 function App() {
+
+  const [ggbCacheManager, setGgbCacheManager] = useState(null);
+
+  useEffect(() => {
+    fileCache().then(res => setGgbCacheManager(res));
+  }, []);
+
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      { ggbCacheManager && <Applet id="ggb1" cacheManager={ggbCacheManager}></Applet>}
     </div>
   );
 }
