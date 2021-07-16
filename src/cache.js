@@ -140,7 +140,10 @@ const fileCache = () => {
             that.clear = () => window.delete(cacheName);
             resolve(that);
           });
-        });
+        })
+        .catch(err => {
+            console.error(`catched cache delete`, err);
+        })
       } else {
         resolve(that); //return the default object
       }
