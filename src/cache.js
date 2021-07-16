@@ -85,6 +85,7 @@
 
 //all functions return a promise
 const fileCache = () => {
+    console.log(`cache very start`);
     //basic passthrough object
     //File caching for GGB Files
     const cacheName = "whjrMathGGBCache";
@@ -101,12 +102,13 @@ const fileCache = () => {
     that.set = url => emptyPromise();
     that.delete = url => emptyPromise();
     that.setAll = urls => emptyPromise();
-  
+    console.log(`check in cache file staart`);
     return new Promise((resolve, reject) => {
+        console.log(`checkin cache file`, window.caches);
       if ("caches" in window) {
         // The Cache API is supported
-        caches.delete(cacheName).then(() => {
-          caches.open(cacheName).then(cache => {
+        window.caches.delete(cacheName).then(() => {
+            window.caches.open(cacheName).then(cache => {
             that.get = url => {
               return new Promise((resolve, reject) => {
                 if (!setAllCache) resolve(url);
@@ -135,7 +137,7 @@ const fileCache = () => {
                 .addAll(urls)
                 .then(res => {})
                 .catch(err => console.log(err));
-            that.clear = () => caches.delete(cacheName);
+            that.clear = () => window.delete(cacheName);
             resolve(that);
           });
         });
