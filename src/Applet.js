@@ -110,7 +110,7 @@ function Applet({ id, cacheManager }) {
                                 cmd: null,
                                 xml: api.getXML(label)
                             }
-                        }), 'http://localhost:3000');
+                        }), 'https://main-ui-math-git-tenx-applet-fixes.whjr.dev');
                     }
 
                     function removeListener(objName) {
