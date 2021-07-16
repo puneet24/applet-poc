@@ -105,7 +105,7 @@ const fileCache = () => {
     console.log(`check in cache file staart`);
     return new Promise((resolve, reject) => {
         console.log(`checkin cache file`, window.caches);
-      if ("caches" in window) {
+      if (false) {
         // The Cache API is supported
         window.caches.delete(cacheName).then(() => {
             window.caches.open(cacheName).then(cache => {
