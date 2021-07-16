@@ -69,6 +69,7 @@ function Applet({ id, cacheManager }) {
     const filename = window.location.search.replace('?', '').split('&').filter(_ => _.indexOf('url=') != -1)[0].split('url=')[1];
 
     useEffect(() => {
+        console.log(`iframe window height`, window.innerHeight);
         window.collab = true;
         appendScript(
             "https://cdn.geogebra.org/apps/deployggb.js",
@@ -83,7 +84,10 @@ function Applet({ id, cacheManager }) {
             const eventJsonData = JSON.parse(event.data);
             console.log(`msg coming from other side`, eventJsonData);
             window.collab = false;
-            if(eventJsonData.msg && eventJsonData.msg.events && eventJsonData.msg.events.length > 0) {
+            // if(eventJsonData.type === "contentHeight") {
+            //     eventJsonData.msg.
+            // }
+             if(eventJsonData.msg && eventJsonData.msg.events && eventJsonData.msg.events.length > 0) {
                 for(let i=0;i<eventJsonData.msg.events.length;i++) {
                     window.evalXML(eventJsonData.msg.events[i].xml);
                 }
