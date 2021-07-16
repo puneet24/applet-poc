@@ -150,20 +150,12 @@ function Applet({ id, cacheManager }) {
                     api.registerUpdateListener(updateListener);
                 }
             };
-            fetch(filename).then((response) => {
-                const responseClose = response.clone();
-                cacheManager
-                    .setUrlWithData(filename, responseClose)
-                    .then(response => cacheManager.get(filename))
-                    .then(res => {
-                        appletParams.filename = res;
-                        let ggApplet = new window.GGBApplet(appletParams, "5.0", { ...views, AV: 0 });
-                        ggApplet.setHTML5Codebase(
-                            "https://www.geogebra.org/apps/5.0.636.0/web3d"
-                        );
-                        ggApplet.inject(idParam);
-                    });
-            });
+            appletParams.filename = filename;
+            let ggApplet = new window.GGBApplet(appletParams, "5.0", { ...views, AV: 0 });
+            ggApplet.setHTML5Codebase(
+                "https://www.geogebra.org/apps/5.0.636.0/web3d"
+            );
+            ggApplet.inject(idParam);
         }
 
     }, [ggbState])
