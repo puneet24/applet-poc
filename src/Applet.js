@@ -51,6 +51,17 @@ const views = {
     macro: 0
 };
 
+let globalApi;
+
+window.evalXML = function (xml, updateConstruction = false) {
+    if (globalApi) {
+        if(xml)
+            globalApi.evalXML(xml);
+        if(updateConstruction)
+            globalApi.evalCommand("UpdateConstruction()");
+    }
+};
+
 function Applet({ id, cacheManager }) {
 
     const [ggbState, setGgbState] = useState(false);
@@ -58,6 +69,7 @@ function Applet({ id, cacheManager }) {
     const filename = window.location.search.replace('?', '').split('&').filter(_ => _.indexOf('url=') != -1)[0].split('url=')[1];
 
     useEffect(() => {
+        window.collab = true;
         appendScript(
             "https://cdn.geogebra.org/apps/deployggb.js",
             "geogebraScript",
@@ -65,35 +77,59 @@ function Applet({ id, cacheManager }) {
                 setGgbState(true);
             }
         );
+
+
+        function receiveMessage(event) {
+            const eventJsonData = JSON.parse(event.data);
+            console.log(`msg coming from other side`, eventJsonData);
+            window.collab = false;
+            if(eventJsonData.msg && eventJsonData.msg.events && eventJsonData.msg.events.length > 0) {
+                for(let i=0;i<eventJsonData.msg.events.length;i++) {
+                    window.evalXML(eventJsonData.msg.events[i].xml);
+                }
+                window.evalXML(null, true);
+            }
+            window.collab = true;
+        }
+        window.addEventListener("message", receiveMessage, false);
     }, []);
 
     useEffect(() => {
-        if (ggbState) {
 
+        if (ggbState) {
             let appletParams = {
                 ...ggParams,
                 id: idParam,
                 appletOnLoad: function (api) {
-                    function addListener(objName) {
-                        console.log(`addListener :- `, objName);
-                        printConstructionState();
+                    globalApi = api;
+                    function addListener(label) {
+                        let parent = window.parent;
+                        parent.postMessage(JSON.stringify({
+                            id: idParam, msg: {
+                                listener: 'ADD_LISTENER',
+                                cmd: null,
+                                xml: api.getXML(label)
+                            }
+                        }), 'http://localhost:3000');
                     }
 
                     function removeListener(objName) {
-                        // textarea1.value = "remove: " + objName + "\n" + textarea1.value.substring(0, strLength);
-                        // printConstructionState();
                     }
 
                     function renameListener(oldObjName, newObjName) {
-                        // textarea1.value = "rename: " + objName + "\n" + textarea1.value.substring(0, strLength);
-                        // printConstructionState();
                     }
 
                     function updateListener(objName) {
+                        if(!window.collab) return;
                         let strVal = api.getValueString(objName);
-                        console.log(`UpdateListener :- `, strVal);
-                        var parent = window.parent;
-                        parent.postMessage(JSON.stringify({ id:idParam, msg: strVal }), 'http://localhost:3000');
+                        let parent = window.parent;
+                        parent.postMessage(JSON.stringify({
+                            id: idParam, msg: {
+                                listener: 'UPDATE_LISTENER',
+                                cmd: strVal,
+                                xml: api.getXML(objName)
+                            }
+                        }), 'http://localhost:3000');
                     }
 
                     const printConstructionState = () => {
@@ -125,22 +161,11 @@ function Applet({ id, cacheManager }) {
                         ggApplet.setHTML5Codebase(
                             "https://www.geogebra.org/apps/5.0.636.0/web3d"
                         );
-                        //this.ggApplet.setPreviewImage("", loadingProgress);
-                        //ggApplet.inject();
                         ggApplet.inject(idParam);
                     });
             });
         }
 
-        // window.onload = function () {
-        //     var applet = new window.GGBApplet('5.0', parameters);
-        //     //  when used with Math Apps Bundle, uncomment this:
-        //     //applet.setHTML5Codebase('GeoGebra/HTML5/5.0/web/');
-        //     console.log('applet ready', id)
-        //     console.log(id);
-
-        //     applet.inject(id);
-        // }
     }, [ggbState])
 
     return (
