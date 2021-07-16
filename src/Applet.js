@@ -8,8 +8,6 @@ const ggParams = {
     appName: "classic",
     id: "applet",
     borderColor: "#cccccc",
-    width: 700,
-    height: 900,
     showMenuBar: false,
     showAlgebraInput: false,
     showToolBar: false,
