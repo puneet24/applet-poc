@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { appendScript } from './script';
+import { AppletbatchProcessor } from './batchProcessor/index';
 
 const ggParams = {
     appName: "classic",
@@ -53,21 +54,68 @@ let globalApi;
 
 window.evalXML = function (xml, updateConstruction = false) {
     if (globalApi) {
-        if(xml)
+        if (xml)
             globalApi.evalXML(xml);
-        if(updateConstruction)
+        if (updateConstruction)
             globalApi.evalCommand("UpdateConstruction()");
     }
 };
 
-function Applet({ id, cacheManager }) {
+function getQueryParam(param) {
+    window.location.search.replace('?', '').split('&').filter(_ => _.indexOf(`${param}=`) != -1)[0].split(`${param}=`)[1];
+}
 
+function Applet({ id, cacheManager }) {
+    const [socketInstance, setSocketInstance] = useState(null);
+    const [appletInitData, setAppletInitData] = useState({});
     const [ggbState, setGgbState] = useState(false);
     const idParam = window.location.search.replace('?', '').split('&').filter(_ => _.indexOf('id=') != -1)[0].split('id=')[1];
     const filename = window.location.search.replace('?', '').split('&').filter(_ => _.indexOf('url=') != -1)[0].split('url=')[1];
 
+    const initSocketService = ({ uid, roomId, studentId, teacherId, socketToken, mode }) => {
+        if (this.props.classId) {
+            const {
+                class_booking = {},
+                vcMeetingId,
+                teacherId
+            } = this.props.classInterfaceData;
+            const { studentId } = class_booking;
+            const uid =
+                this.props.mode === "student"
+                    ? class_booking.student_bookings[0].studentId
+                    : teacherId;
+
+            let socketInstance = socketManager({ uid, roomId, socketToken });
+            AppletbatchProcessor.init({ socketInstance: socketInstance });
+            setSocketInstance(socketInstance);
+
+            const unsubscribeSocketMessage = socketInstance.onMessage(data => {
+                console.log(data);
+                if (data && data.type) {
+                    switch (data.type) {
+                        case "GET_LATEST_XML":
+                            this.state.socketInstance.send({
+                                type: "LATEST_XML",
+                                state: { latestXml: this.getBase64Applet() }
+                            });
+                            break;
+                        case "LATEST_XML":
+                            this.setBase64Applet(data.state.latestXml);
+                            break;
+                        case "COMMAND":
+                            window.collab = false;
+                            const batchEvents = data.state;
+                            for (let i = 0; i < batchEvents.length; i++) {
+                                window.evalXML(batchEvents[i].xml)
+                            }
+                            window.collab = true;
+                    }
+                }
+            });
+        }
+    };
+
     useEffect(() => {
-        console.log(`iframe window height`, window.innerHeight);
         window.collab = true;
         appendScript(
             "https://cdn.geogebra.org/apps/deployggb.js",
@@ -81,23 +129,15 @@ function Applet({ id, cacheManager }) {
         function receiveMessage(event) {
             const eventJsonData = JSON.parse(event.data);
             console.log(`msg coming from other side`, eventJsonData);
-            window.collab = false;
-            // if(eventJsonData.type === "contentHeight") {
-            //     eventJsonData.msg.
-            // }
-             if(eventJsonData.msg && eventJsonData.msg.events && eventJsonData.msg.events.length > 0) {
-                for(let i=0;i<eventJsonData.msg.events.length;i++) {
-                    window.evalXML(eventJsonData.msg.events[i].xml);
-                }
-                window.evalXML(null, true);
+            //window.collab = false;
+            if (eventJsonData.msg && eventJsonData.msg.type === 'init') {
+                initSocketService({ ...eventJsonData.msg });
             }
-            window.collab = true;
         }
         window.addEventListener("message", receiveMessage, false);
     }, []);
 
     useEffect(() => {
-
         if (ggbState) {
             let appletParams = {
                 ...ggParams,
@@ -105,14 +145,15 @@ function Applet({ id, cacheManager }) {
                 appletOnLoad: function (api) {
                     globalApi = api;
                     function addListener(label) {
-                        let parent = window.parent;
-                        parent.postMessage(JSON.stringify({
-                            id: idParam, msg: {
-                                listener: 'ADD_LISTENER',
-                                cmd: null,
-                                xml: api.getXML(label)
+                        AppletbatchProcessor.processMessage({
+                            msg: {
+                                state: {
+                                    listener: 'UPDATE_LISTENER',
+                                    xml: api.getXML(label),
+                                    mode: appletInitData.mode
+                                }
                             }
-                        }), '*');
+                        });
                     }
 
                     function removeListener(objName) {
@@ -122,20 +163,18 @@ function Applet({ id, cacheManager }) {
                     }
 
                     function updateListener(objName) {
-                        if(!window.collab) return;
+                        if (!window.collab) return;
                         let strVal = api.getValueString(objName);
-                        let parent = window.parent;
-                        
-                        console.log(`batchsimulation :- `, window.batchSimulation);
-                        for(let i=0;i<100;i++) {
-                            parent.postMessage(JSON.stringify({
-                                id: idParam, msg: {
+                        AppletbatchProcessor.processMessage({
+                            msg: {
+                                state: {
                                     listener: 'UPDATE_LISTENER',
-                                    cmd: strVal,
-                                    xml: api.getXML(objName)
+                                    xml: api.getXML(label),
+                                    mode: appletInitData.mode
                                 }
-                            }), '*');
-                        }
+                            }
+                        });
+
                     }
 
                     const printConstructionState = () => {
