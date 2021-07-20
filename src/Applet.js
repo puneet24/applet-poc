@@ -125,7 +125,8 @@ function Applet({ id, cacheManager }) {
                         if(!window.collab) return;
                         let strVal = api.getValueString(objName);
                         let parent = window.parent;
-                        for(let i=0;i<100;i++) {
+                        console.log(`batchsimulation :- `, window.batchSimulation);
+                        for(let i=0;i<window.batchSimulation;i++) {
                             parent.postMessage(JSON.stringify({
                                 id: idParam, msg: {
                                     listener: 'UPDATE_LISTENER',
