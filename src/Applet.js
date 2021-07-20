@@ -112,7 +112,7 @@ function Applet({ id, cacheManager }) {
                                 cmd: null,
                                 xml: api.getXML(label)
                             }
-                        }), 'https://main-ui-math-git-tenx-applet-fixes.whjr.dev');
+                        }), '*');
                     }
 
                     function removeListener(objName) {
@@ -125,13 +125,15 @@ function Applet({ id, cacheManager }) {
                         if(!window.collab) return;
                         let strVal = api.getValueString(objName);
                         let parent = window.parent;
-                        parent.postMessage(JSON.stringify({
-                            id: idParam, msg: {
-                                listener: 'UPDATE_LISTENER',
-                                cmd: strVal,
-                                xml: api.getXML(objName)
-                            }
-                        }), 'https://main-ui-math-git-tenx-applet-fixes.whjr.dev');
+                        for(let i=0;i<(window.batchSimulation || 1);i++) {
+                            parent.postMessage(JSON.stringify({
+                                id: idParam, msg: {
+                                    listener: 'UPDATE_LISTENER',
+                                    cmd: strVal,
+                                    xml: api.getXML(objName)
+                                }
+                            }), '*');
+                        }
                     }
 
                     const printConstructionState = () => {
