@@ -19,16 +19,16 @@
 // socketInstance.close();
 // Note that this action will remove all event listeners from this instance and mark it close
 
-import { api__getWebsocketToken } from "./../index";
 import { socketInstance } from "./socket-instance";
-import { config } from "../../config";
 
 let connections = {};
+
+const socketUrl = 'wss://hzqpapvxa4.execute-api.eu-west-1.amazonaws.com/prod';
 
 export const socketManager = ({ uid, roomId, socketToken }) => {
     const key = `${uid}-${roomId}`;
     if (!connections[key] || connections[key].closed) {
-        connections[key] = socketInstance({ uid, roomId, url });
+        connections[key] = socketInstance({ uid, roomId, url: socketUrl });
         connections[key].init(socketToken);
     }
     return connections[key];

@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react';
 import { appendScript } from './script';
 import { AppletbatchProcessor } from './batchProcessor/index';
+import { socketManager } from './socket/socket-manager';
 
 const ggParams = {
     appName: "classic",
@@ -61,10 +62,6 @@ window.evalXML = function (xml, updateConstruction = false) {
     }
 };
 
-function getQueryParam(param) {
-    window.location.search.replace('?', '').split('&').filter(_ => _.indexOf(`${param}=`) != -1)[0].split(`${param}=`)[1];
-}
-
 function Applet({ id, cacheManager }) {
     const [socketInstance, setSocketInstance] = useState(null);
     const [appletInitData, setAppletInitData] = useState({});
@@ -72,47 +69,37 @@ function Applet({ id, cacheManager }) {
     const idParam = window.location.search.replace('?', '').split('&').filter(_ => _.indexOf('id=') != -1)[0].split('id=')[1];
     const filename = window.location.search.replace('?', '').split('&').filter(_ => _.indexOf('url=') != -1)[0].split('url=')[1];
 
-    const initSocketService = ({ uid, roomId, studentId, teacherId, socketToken, mode }) => {
-        if (this.props.classId) {
-            const {
-                class_booking = {},
-                vcMeetingId,
-                teacherId
-            } = this.props.classInterfaceData;
-            const { studentId } = class_booking;
-            const uid =
-                this.props.mode === "student"
-                    ? class_booking.student_bookings[0].studentId
-                    : teacherId;
+    const initSocketService = ({ roomId, studentId, teacherId, socketToken, mode }) => {
 
-            let socketInstance = socketManager({ uid, roomId, socketToken });
-            AppletbatchProcessor.init({ socketInstance: socketInstance });
-            setSocketInstance(socketInstance);
+        const uid = mode === 'teacher' ? teacherId : studentId;
+        let socketInstance = socketManager({ uid, roomId, socketToken });
+        AppletbatchProcessor.init({ socketInstance: socketInstance });
+        setSocketInstance(socketInstance);
 
-            const unsubscribeSocketMessage = socketInstance.onMessage(data => {
-                console.log(data);
-                if (data && data.type) {
-                    switch (data.type) {
-                        case "GET_LATEST_XML":
-                            this.state.socketInstance.send({
-                                type: "LATEST_XML",
-                                state: { latestXml: this.getBase64Applet() }
-                            });
-                            break;
-                        case "LATEST_XML":
-                            this.setBase64Applet(data.state.latestXml);
-                            break;
-                        case "COMMAND":
-                            window.collab = false;
-                            const batchEvents = data.state;
-                            for (let i = 0; i < batchEvents.length; i++) {
-                                window.evalXML(batchEvents[i].xml)
-                            }
-                            window.collab = true;
-                    }
+        const unsubscribeSocketMessage = socketInstance.onMessage(data => {
+            console.log(data);
+            if (data && data.type) {
+                switch (data.type) {
+                    case "GET_LATEST_XML":
+                        this.state.socketInstance.send({
+                            type: "LATEST_XML",
+                            state: { latestXml: this.getBase64Applet() }
+                        });
+                        break;
+                    case "LATEST_XML":
+                        this.setBase64Applet(data.state.latestXml);
+                        break;
+                    case "COMMAND":
+                        window.collab = false;
+                        const batchEvents = data.state;
+                        for (let i = 0; i < batchEvents.length; i++) {
+                            window.evalXML(batchEvents[i].xml)
+                        }
+                        window.collab = true;
                 }
-            });
-        }
+            }
+        });
+
     };
 
     useEffect(() => {
@@ -169,7 +156,7 @@ function Applet({ id, cacheManager }) {
                             msg: {
                                 state: {
                                     listener: 'UPDATE_LISTENER',
-                                    xml: api.getXML(label),
+                                    xml: api.getXML(objName),
                                     mode: appletInitData.mode
                                 }
                             }
@@ -201,6 +188,15 @@ function Applet({ id, cacheManager }) {
                 "https://www.geogebra.org/apps/5.0.636.0/web3d"
             );
             ggApplet.inject(idParam);
+            window.parent.postMessage(
+                JSON.stringify({
+                    id: "ggb1",
+                    msg: {
+                        type: 'iframe-loaded'
+                    }
+                }),
+                "*"
+            );
         }
 
     }, [ggbState])
